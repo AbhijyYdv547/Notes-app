@@ -12,10 +12,10 @@ export const createController = async (req: Request, res: Response): Promise<voi
   try {
     const parsedInfo = createNoteSchema.safeParse(req.body);
     if (!parsedInfo.success) {
-      res.json({
-        message: "Some problem occured"
-      })
-      return;
+  res.status(400).json({
+    message: "Invalid input"
+  });
+  return
     }
     const { title, body } = parsedInfo.data;
     const note = await Note.create({

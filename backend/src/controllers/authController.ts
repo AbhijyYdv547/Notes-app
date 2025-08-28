@@ -8,6 +8,7 @@ import { oauth2client } from "../utils/googleConfig.js";
 import axios from "axios";
 import Otp from "../model/Otp.js";
 import { reqOtpSchema, verifyOtpSchema } from "../validation/zodValidator.js";
+import { sendOtpEmail } from "../services/otp.js";
 dotenv.config()
 
 interface GoogleUser {
@@ -133,7 +134,7 @@ export const myInfoController = async (req: Request, res: Response) => {
     }
 
 
-    const result = await User.findById({ userId })
+    const result = await User.findById(userId)
 
     if (!result) {
       res.status(404).json({ message: "User not found" });
