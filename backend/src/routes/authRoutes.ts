@@ -1,13 +1,13 @@
 import express from "express";
-import { loginController, myInfoController, signupController, googleLogin } from "../controllers/authController.js";
+import { myInfoController, googleLogin, reqOtpController, verifyOtpController } from "../controllers/authController.js";
 import { middleware } from "../middlewares/userMiddleware.js";
 
 
 const router = express.Router();
 
-router.post("/register", signupController );
+router.post("/request-otp", reqOtpController );
 
-router.post("/login", loginController);
+router.post("/verify-otp", verifyOtpController);
 
 router.post("/google",googleLogin)
 
