@@ -17,7 +17,7 @@ export function middleware(req: Request, res: Response, next: NextFunction) {
             res.status(401).json({ error: "Unauthorized" });
             return;
         }
-        req.userId = parseInt(decoded.userId);
+        req.userId = decoded.userId;
         
         next();
     } catch (error) {

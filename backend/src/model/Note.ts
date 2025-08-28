@@ -8,5 +8,5 @@ const NoteSchema = new mongoose.Schema({
   updatedAt: { type: Date }
 });
 
-const Resume = mongoose.model("Note", NoteSchema);
-export default Resume;
+const Note = mongoose.model("Note", NoteSchema);
+export default Note;

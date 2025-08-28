@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import notesRoutes from "./routes/notesRoutes.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
@@ -22,7 +23,7 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/notes", notesRoutes);
 
-// app.use(errorHandler)
+app.use(errorHandler)
 
 const PORT = Number(process.env.PORT) || 3000; 
 app.listen(PORT, () => {

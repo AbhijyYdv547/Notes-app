@@ -58,7 +58,7 @@ export const verifyOtpController = async (req: Request, res: Response) => {
         consumed:false
      });
 
-if (!record || isBefore(record.expiresAt, new Date())){
+if (!record  || !record.expiresAt || isBefore(record.expiresAt, new Date())){
     res.status(400).json({ message: "Invalid or expired OTP" });
     return
 }
@@ -74,10 +74,8 @@ if (!record || isBefore(record.expiresAt, new Date())){
       return;
     }
 
-    await Otp.findOneAndUpdate({
-        _id: record._id,
-        consumed:true
-    })
+await Otp.findByIdAndUpdate(record._id, { consumed: true });
+
 
     if (!process.env.JWT_SECRET) {
       res.status(500).json({ error: "JWT secret not set" })
@@ -115,10 +113,11 @@ export const logoutController = async (req: Request, res: Response) => {
 export const myInfoController = async (req: Request, res: Response) => {
     try {
         const userId = req.userId;
-        if (typeof userId !== "number") {
-            res.status(401).json({ message: "Unauthorized" });
-            return;
-        }
+if (!userId) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+}
+
 
         const result = await User.findById({userId})
 

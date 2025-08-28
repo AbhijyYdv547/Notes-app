@@ -1,4 +1,3 @@
-import Resume from "../model/Note.js";
 import type { Request, Response } from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
@@ -14,7 +13,7 @@ export const createController = async (req: Request, res: Response): Promise<voi
     const note = await Note.create({
         title: title,
         body: body,
-        user: req.userId
+        userId: req.userId
     })
 
     res.status(200).json(note);
@@ -41,15 +40,15 @@ export const getSpecificController = async (req: Request, res: Response) => {
     const { id } = req.params;
     // @ts-ignore
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({ error: "Invalid resume ID" });
+      res.status(400).json({ error: "Invalid note ID" });
       return;
     }
-    const resume = await Resume.findOne({ _id: id, userId: req.userId });
-    if (!resume) {
-      res.status(404).json({ error: "Resume not found" });
+    const note = await Note.findOne({ _id: id, userId: req.userId });
+    if (!note) {
+      res.status(404).json({ error: "Note not found" });
       return;
     }
-    res.json(resume);
+    res.json(note);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -59,13 +58,13 @@ export const getSpecificController = async (req: Request, res: Response) => {
 export const delController = async (req: Request, res: Response) => {
   try {
 
-    const deleted = await Resume.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    const deleted = await Note.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     if (!deleted) {
-      res.status(404).json({ error: "Resume not found" });
+      res.status(404).json({ error: "Note not found" });
       return;
     }
-    res.json({ message: "Resume deleted successfully" });
+    res.json({ message: "Note deleted successfully" });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
