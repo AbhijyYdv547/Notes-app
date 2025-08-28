@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import Note from "../model/Note.js";
+import { createNoteSchema } from "../validation/zodValidator.js";
 
 
 dotenv.config();
@@ -9,16 +10,23 @@ dotenv.config();
 
 export const createController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title,body } = req.body;
+    const parsedInfo = createNoteSchema.safeParse(req.body);
+    if (!parsedInfo.success) {
+      res.json({
+        message: "Some problem occured"
+      })
+      return;
+    }
+    const { title, body } = parsedInfo.data;
     const note = await Note.create({
-        title: title,
-        body: body,
-        userId: req.userId
+      title: title,
+      body: body,
+      userId: req.userId
     })
 
     res.status(200).json(note);
     return;
-  } catch (error:any) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message || "Internal Server Error" });
     return;
   }

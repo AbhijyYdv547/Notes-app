@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const OtpSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   code: { type: String }, 
   expiresAt: { type:Date },
   consumed: { type:Boolean, default:false },

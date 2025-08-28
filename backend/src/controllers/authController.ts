@@ -7,6 +7,7 @@ import User from "../model/User.js";
 import { oauth2client } from "../utils/googleConfig.js";
 import axios from "axios";
 import Otp from "../model/Otp.js";
+import { reqOtpSchema, verifyOtpSchema } from "../validation/zodValidator.js";
 dotenv.config()
 
 interface GoogleUser {
@@ -15,55 +16,68 @@ interface GoogleUser {
 }
 
 export const reqOtpController = async (req: Request, res: Response) => {
-    try {
-        const { email } = req.body;
-        if ( !email ) {
-            res.status(400).json({ error: "All fields are required" });
-            return;
-        }
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            if (existingUser.authProvider === 'google') {
-                res.status(409).json({ error: "Email already registered via Google. Please use Google Login." });
-                return;
-            }
-        }
-        const code = crypto.randomInt(100000, 999999).toString();
-        const expiresAt = addMinutes(new Date(), 10);
-
-        await Otp.create({ data: { email, code, expiresAt } });
-        await sendOtpEmail(email, code).catch(() => {});
-        res.status(201).json({
-            message: "Otp sent if the email is vaild"
-        });
-
-    } catch (e) {
-        res.status(409).json({
-            message: "User already exists with this username"
-        })
+  try {
+    const parsedInfo = reqOtpSchema.safeParse(req.body);
+    if (!parsedInfo.success) {
+      res.status(400).json({ message: "Incorrect inputs" });
+      return;
     }
+
+    const { email } = parsedInfo.data;
+
+    const existingUser = await User.findOne({
+      email
+    });
+    if (existingUser) {
+      if (existingUser.authProvider === 'google') {
+        res.status(409).json({ error: "Email already registered via Google. Please use Google Login." });
+        return;
+      }
+    }
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = addMinutes(new Date(), 10);
+
+    await Otp.create({
+      email,
+      code,
+      expiresAt
+    });
+    await sendOtpEmail(email, code).catch(() => { });
+    res.status(201).json({
+      message: "Otp sent if the email is vaild"
+    });
+
+  } catch (e) {
+    res.status(409).json({
+      message: "User already exists with this username"
+    })
+  }
 }
 
 export const verifyOtpController = async (req: Request, res: Response) => {
   try {
-    const { email, code, name } = req.body;
-    if (!email || !code ) {
-      res.status(400).json({ error: "Email and otp are required" });
+    const parsedInfo = verifyOtpSchema.safeParse(req.body);
+    if (!parsedInfo.success) {
+      res.status(400).json({ message: "Incorrect inputs" });
       return;
     }
-    const record = await Otp.findOne({ 
-        email:email,
-        code:code,
-        consumed:false
-     });
 
-if (!record  || !record.expiresAt || isBefore(record.expiresAt, new Date())){
-    res.status(400).json({ message: "Invalid or expired OTP" });
-    return
-}
+    const { email, code } = parsedInfo.data;
 
-    let user = await User.findOne({email})
+    const record = await Otp.findOne({
+      email: email,
+      code: code,
+      consumed: false
+    });
+
+    if (!record || !record.expiresAt || isBefore(record.expiresAt, new Date())) {
+      res.status(400).json({ message: "Invalid or expired OTP" });
+      return
+    }
+
+    let user = await User.findOne({
+      email: email
+    })
     if (!user) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
@@ -74,7 +88,7 @@ if (!record  || !record.expiresAt || isBefore(record.expiresAt, new Date())){
       return;
     }
 
-await Otp.findByIdAndUpdate(record._id, { consumed: true });
+    await Otp.findByIdAndUpdate(record._id, { consumed: true });
 
 
     if (!process.env.JWT_SECRET) {
@@ -84,58 +98,58 @@ await Otp.findByIdAndUpdate(record._id, { consumed: true });
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 60 * 60 * 1000
-        })
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000
+    })
 
-        res.json({
-            message: "Login Successful"
-        })
-    } catch (e) {
-        res.status(500).json({ message: "Internal server error" });
-    }
+    res.json({
+      message: "Login Successful"
+    })
+  } catch (e) {
+    res.status(500).json({ message: "Internal server error" });
+  }
 
 }
 
 export const logoutController = async (req: Request, res: Response) => {
-    res.clearCookie("token", {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-    });
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
-    res.json({ message: "Logged out" });
+  res.json({ message: "Logged out" });
 }
 
 export const myInfoController = async (req: Request, res: Response) => {
-    try {
-        const userId = req.userId;
-if (!userId) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-}
-
-
-        const result = await User.findById({userId})
-
-        if (!result) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-
-        res.json({
-            user: {
-                id: result.id,
-                name: result?.name
-            }
-        })
-    } catch (e) {
-        console.error("myInfoController error:", e);
-        res.status(500).json({ message: "Internal server error" });
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized" });
+      return;
     }
+
+
+    const result = await User.findById({ userId })
+
+    if (!result) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    res.json({
+      user: {
+        id: result.id,
+        name: result?.name
+      }
+    })
+  } catch (e) {
+    console.error("myInfoController error:", e);
+    res.status(500).json({ message: "Internal server error" });
+  }
 }
 
 
@@ -162,31 +176,31 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 
     let user = await User.findOne({ email });
-    
+
     if (!user) {
       user = await User.create({ name, email, authProvider: 'google' });
-    }else if (user.authProvider === 'local') {
-  res.status(400).json({ error: "This email is already registered with a password. Please use email/password login." });
-  return;
-}
+    } else if (user.authProvider === 'local') {
+      res.status(400).json({ error: "This email is already registered with a password. Please use email/password login." });
+      return;
+    }
 
     if (!process.env.JWT_SECRET) {
       res.status(500).json({ error: "JWT secret not set" })
       return;
     }
 
-  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 60 * 60 * 1000
-        })
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000
+    })
 
-        res.json({
-            message: "Login Successful"
-        })
+    res.json({
+      message: "Login Successful"
+    })
 
   } catch (error) {
     res.status(500).json({
