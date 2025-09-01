@@ -13,7 +13,7 @@ const Login = () => {
 
         try {
             await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/request-otp`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/login/request-otp`,
                 { email }
             );
             setOtpRequested(true); 
@@ -30,7 +30,7 @@ const Login = () => {
 
         try {
             await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-otp`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/login/verify-otp`,
                 { email, otp }
             );
         } catch (err) {

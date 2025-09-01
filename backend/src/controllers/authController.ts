@@ -4,8 +4,6 @@ import crypto from "crypto"
 import { addMinutes, isBefore } from "date-fns";
 import dotenv from "dotenv"
 import User from "../model/User.js";
-import { oauth2client } from "../utils/googleConfig.js";
-import axios from "axios";
 import Otp from "../model/Otp.js";
 import { reqOtpSchema, verifyOtpSchema } from "../validation/zodValidator.js";
 import { sendOtpEmail } from "../services/otp.js";
@@ -16,86 +14,59 @@ interface GoogleUser {
   name: string;
 }
 
-export const reqOtpController = async (req: Request, res: Response) => {
+export const signupRequestOtpController = async (req: Request, res: Response) => {
   try {
-    const parsedInfo = reqOtpSchema.safeParse(req.body);
-    if (!parsedInfo.success) {
-      res.status(400).json({ message: "Incorrect inputs" });
-      return;
-    }
+    const parsed = reqOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
 
-    const { email } = parsedInfo.data;
+    const { email, name } = parsed.data;
 
-    const existingUser = await User.findOne({
-      email
-    });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      if (existingUser.authProvider === 'google') {
-        res.status(409).json({ error: "Email already registered via Google. Please use Google Login." });
-        return;
-      }
+      return res.status(409).json({ message: "User already exists. Please login." });
     }
+
     const code = crypto.randomInt(100000, 999999).toString();
     const expiresAt = addMinutes(new Date(), 10);
 
-    await Otp.create({
-      email,
-      code,
-      expiresAt
-    });
-    await sendOtpEmail(email, code).catch(() => { });
-    res.status(201).json({
-      message: "Otp sent if the email is vaild"
-    });
+    await Otp.create({ email, code, expiresAt, consumed: false });
+    await sendOtpEmail(email, code).catch(() => {});
 
-  } catch (e) {
-    res.status(409).json({
-      message: "User already exists with this username"
-    })
+    return res.status(201).json({ message: "OTP sent for signup" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
-export const verifyOtpController = async (req: Request, res: Response) => {
+// Signup: Verify OTP and create user
+export const signupVerifyOtpController = async (req: Request, res: Response) => {
   try {
-    const parsedInfo = verifyOtpSchema.safeParse(req.body);
-    if (!parsedInfo.success) {
-      res.status(400).json({ message: "Incorrect inputs" });
-      return;
-    }
+    const parsed = verifyOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
 
-    const { email, code } = parsedInfo.data;
+    const { email, code, name } = parsed.data;
 
-    const record = await Otp.findOne({
-      email: email,
-      code: code,
-      consumed: false
-    });
-
+    const record = await Otp.findOne({ email, code, consumed: false });
     if (!record || !record.expiresAt || isBefore(record.expiresAt, new Date())) {
-      res.status(400).json({ message: "Invalid or expired OTP" });
-      return
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    let user = await User.findOne({
-      email: email
-    })
-    if (!user) {
-      res.status(401).json({ error: "Invalid credentials" });
-      return;
-    }
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(409).json({ message: "User already exists" });
 
-    if (user.authProvider === 'google') {
-      res.status(400).json({ error: "Account registered via Google. Use Google Login." });
-      return;
-    }
-
+    // Mark OTP as consumed
     await Otp.findByIdAndUpdate(record._id, { consumed: true });
 
+    // Create user
+    const user = await User.create({
+      email,
+      name,
+      authProvider: "otp"
+    });
 
-    if (!process.env.JWT_SECRET) {
-      res.status(500).json({ error: "JWT secret not set" })
-      return;
-    }
+    // Generate JWT
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: "JWT secret not set" });
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
@@ -104,16 +75,76 @@ export const verifyOtpController = async (req: Request, res: Response) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 1000
-    })
+    });
 
-    res.json({
-      message: "Login Successful"
-    })
-  } catch (e) {
-    res.status(500).json({ message: "Internal server error" });
+    return res.json({ message: "Signup successful", user: { id: user._id, name: user.name } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
+};
 
-}
+
+// Login: Request OTP
+export const loginRequestOtpController = async (req: Request, res: Response) => {
+  try {
+    const parsed = reqOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
+
+    const { email } = parsed.data;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found. Please signup." });
+
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expiresAt = addMinutes(new Date(), 10);
+
+    await Otp.create({ email, code, expiresAt, consumed: false });
+    await sendOtpEmail(email, code).catch(() => {});
+
+    return res.status(201).json({ message: "OTP sent for login" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Login: Verify OTP
+export const loginVerifyOtpController = async (req: Request, res: Response) => {
+  try {
+    const parsed = verifyOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
+
+    const { email, code } = parsed.data;
+
+    const record = await Otp.findOne({ email, code, consumed: false });
+    if (!record || !record.expiresAt || isBefore(record.expiresAt, new Date())) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await Otp.findByIdAndUpdate(record._id, { consumed: true });
+
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: "JWT secret not set" });
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 1000
+    });
+
+    return res.json({ message: "Login successful", user: { id: user._id, name: user.name } });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 export const logoutController = async (req: Request, res: Response) => {
   res.clearCookie("token", {
@@ -153,59 +184,3 @@ export const myInfoController = async (req: Request, res: Response) => {
   }
 }
 
-
-export const googleLogin = async (req: Request, res: Response) => {
-  try {
-    const code = req.query.code as string;
-    if (!code) {
-      res.status(400).json({ error: "Missing code from Google" });
-      return;
-    }
-
-    const { tokens } = await oauth2client.getToken(code);
-    oauth2client.setCredentials(tokens);
-
-    const userRes = await axios.get<GoogleUser>(
-      `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${tokens.access_token}`
-    )
-
-    const { email, name } = userRes.data;
-
-    if (!email || !name) {
-      res.status(400).json({ error: "Email and Password are required" });
-      return;
-    }
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      user = await User.create({ name, email, authProvider: 'google' });
-    } else if (user.authProvider === 'local') {
-      res.status(400).json({ error: "This email is already registered with a password. Please use email/password login." });
-      return;
-    }
-
-    if (!process.env.JWT_SECRET) {
-      res.status(500).json({ error: "JWT secret not set" })
-      return;
-    }
-
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 1000
-    })
-
-    res.json({
-      message: "Login Successful"
-    })
-
-  } catch (error) {
-    res.status(500).json({
-      message: "Internal Server Error"
-    })
-  }
-}

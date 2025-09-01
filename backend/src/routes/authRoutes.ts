@@ -1,15 +1,16 @@
 import express from "express";
-import { myInfoController, googleLogin, reqOtpController, verifyOtpController } from "../controllers/authController.js";
+import { loginRequestOtpController, loginVerifyOtpController, myInfoController, signupRequestOtpController, signupVerifyOtpController } from "../controllers/authController.js";
 import { middleware } from "../middlewares/userMiddleware.js";
 
 
 const router = express.Router();
 
-router.post("/request-otp", reqOtpController );
+router.post("/signup/request-otp", signupRequestOtpController);
+router.post("/signup/verify-otp", signupVerifyOtpController);
 
-router.post("/verify-otp", verifyOtpController);
-
-router.post("/google",googleLogin)
+// Login
+router.post("/login/request-otp", loginRequestOtpController);
+router.post("/login/verify-otp", loginVerifyOtpController);
 
 router.get("/me",middleware,myInfoController)
 

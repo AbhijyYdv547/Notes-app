@@ -17,7 +17,7 @@ const Signup = () => {
 
         try {
             await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/request-otp`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/signup/request-otp`,
                 { email }
             );
             setOtpRequested(true); 
@@ -32,11 +32,12 @@ const Signup = () => {
         const payload = {
             email: emailRef.current?.value.trim(),
             code: otpRef.current?.value.trim(),
+            name: nameRef.current?.value.trim()
         };
 
         try {
             await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-otp`,
+                `${import.meta.env.VITE_BACKEND_URL}/api/auth/signup/verify-otp`,
                 payload
             );
             alert("Signup successful ");

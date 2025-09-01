@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv"
+dotenv.config()
 
 export async function sendOtpEmail(email: string, code: string) {
   const transporter = nodemailer.createTransport({

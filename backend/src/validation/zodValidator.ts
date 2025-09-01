@@ -11,5 +11,7 @@ export const reqOtpSchema = z.object({
 
 export const verifyOtpSchema = z.object({
     email: z.email(),
+    name : z.string(),
+    dob: z.date(),
     code: z.string()
 })
