@@ -5,7 +5,7 @@ import { addMinutes, isBefore } from "date-fns";
 import dotenv from "dotenv"
 import User from "../model/User.js";
 import Otp from "../model/Otp.js";
-import { reqOtpSchema, verifyOtpSchema } from "../validation/zodValidator.js";
+import { reqOtpSchema, verifyOtpSchemaForLogin, verifyOtpSchemaForSignup } from "../validation/zodValidator.js";
 import { sendOtpEmail } from "../services/otp.js";
 dotenv.config()
 
@@ -19,7 +19,7 @@ export const signupRequestOtpController = async (req: Request, res: Response) =>
     const parsed = reqOtpSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
 
-    const { email, name } = parsed.data;
+    const { email } = parsed.data;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -42,7 +42,7 @@ export const signupRequestOtpController = async (req: Request, res: Response) =>
 // Signup: Verify OTP and create user
 export const signupVerifyOtpController = async (req: Request, res: Response) => {
   try {
-    const parsed = verifyOtpSchema.safeParse(req.body);
+    const parsed = verifyOtpSchemaForSignup.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
 
     const { email, code, name } = parsed.data;
@@ -112,7 +112,7 @@ export const loginRequestOtpController = async (req: Request, res: Response) => 
 // Login: Verify OTP
 export const loginVerifyOtpController = async (req: Request, res: Response) => {
   try {
-    const parsed = verifyOtpSchema.safeParse(req.body);
+    const parsed = verifyOtpSchemaForLogin.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid input" });
 
     const { email, code } = parsed.data;

@@ -18,6 +18,9 @@ type UserType = {
 const Dashboard = () => {
     const [notes, setNotes] = useState<NoteType[]>([]);
     const [user, setUser] = useState<UserType>();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newNoteTitle,setNewNoteTitle] = useState<string>()
+    const [newNoteBody,setNewNoteBody] = useState<string>()
 
     const API_BASE = import.meta.env.VITE_BACKEND_URL; 
 
@@ -93,11 +96,46 @@ const Dashboard = () => {
                 )}
 
                 <button
-                    onClick={handleCreateNote}
+                    onClick={() => setIsModalOpen(true)}
                     className="w-full max-w-md bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition mb-6"
                 >
                     Create Note
                 </button>
+
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="bg-white p-4 rounded w-96">
+                            <h2 className="text-lg font-bold mb-2">New Note</h2>
+                            <form
+                                onSubmit={handleCreateNote}
+                            >
+                                <input
+                                    type="text"
+                                    placeholder="Title"
+                                    value={newNoteTitle}
+                                    onChange={(e) => setNewNoteTitle(e.target.value)}
+                                    className="w-full mb-2 p-2 border rounded"
+                                    required
+                                />
+                                <textarea
+                                    placeholder="Body"
+                                    value={newNoteBody}
+                                    onChange={(e) => setNewNoteBody(e.target.value)}
+                                    className="w-full mb-2 p-2 border rounded"
+                                    required
+                                />
+                                <div className="flex justify-end space-x-2">
+                                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-3 py-1 border rounded">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                        Create
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
 
                 <div className="w-full max-w-md">
                     <h3 className="text-lg font-semibold mb-2 text-gray-700">Notes</h3>
