@@ -6,8 +6,7 @@ A full-stack note-taking application built with **React**, **Node.js (Express)**
 
 ## Live Demo
 
-[Live URL Here](https://your-deployment-url.com)
-(Replace with actual deployed link)
+https://notes-app-sepia-iota.vercel.app/
 
 ---
 
@@ -23,7 +22,7 @@ A full-stack note-taking application built with **React**, **Node.js (Express)**
 ## Features
 
 * **User Signup via Email + OTP**
-* **Login via Google OAuth**
+* **Login via Email + OTP**
 * **JWT-based authentication**
 * **Create, Get, View, and Delete Notes**
 * **Input validation using Zod**
@@ -58,20 +57,20 @@ A full-stack note-taking application built with **React**, **Node.js (Express)**
 ### Backend (`.env`)
 
 ```env
-PORT=5000
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_jwt_secret
-REACT_APP_URL=http://localhost:3000
+PORT=
+DB_URI=
+JWT_SECRET=
+REACT_APP_URL=
+EMAIL_USER=
+EMAIL_PASS=
 
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_email_password_or_app_password
 
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google
 ```
+### Frontend (`.env`)
 
-> ⚠️ Never commit `.env` files to version control.
+```env
+VITE_BACKEND_URL=
+```
 
 ---
 
@@ -79,12 +78,13 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google
 
 ### Auth Routes
 
-| Method | Endpoint                | Description          |
-| ------ | ----------------------- | -------------------- |
-| POST   | `/api/auth/request-otp` | Request OTP to email |
-| POST   | `/api/auth/verify-otp`  | Verify OTP and login |
-| POST   | `/api/auth/google`      | Google OAuth login   |
-| GET    | `/api/auth/me`          | Get current user     |
+| Method | Endpoint                         | Description          |
+| ------ | ---------------------------------| -------------------- |
+| POST   | `/api/auth/signup/request-otp`   | Request OTP to email |
+| POST   | `/api/auth/login/request-otp`    | Request OTP to email |
+| POST   | `/api/auth/signup/verify-otp`    | Verify OTP and login |
+| POST   | `/api/auth/login/verify-otp`     | Verify OTP and login |
+| GET    | `/api/auth/me`                   | Get current user     |
 
 ### Notes Routes
 
@@ -102,8 +102,8 @@ GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/note-taking-app.git
-cd note-taking-app
+git clone https://github.com/your-username/Notes-app.git
+cd Notes-app
 ```
 
 ### 2. Install dependencies
@@ -135,7 +135,7 @@ npm run dev
 
 ```bash
 cd ../frontend
-npm start
+npm npm run dev
 ```
 
 ---
@@ -151,16 +151,9 @@ Each feature was developed and committed step-by-step. Example commits:
 
 ---
 
-## Screenshots
-
-*(Add screenshots of your UI and API responses if possible)*
-
----
-
 ## Notes
 
 * Please ensure you use a secure and verified sender address when sending OTP emails.
-* Only users who signed up via Google can log in via Google.
 * JWT is stored in HTTP-only cookies for security.
 
 ---
@@ -181,11 +174,3 @@ Deployed on:
 
 ---
 
-## Future Improvements
-
-* Edit notes functionality
-* Add tags and categories
-* Search and filter
-* Dark mode
-
----
